@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShopEasy Data Analyst Agent — Multi-Agent Live Analytics</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#f5f3ff',
+              100: '#ede9fe',
+              400: '#a78bfa',
+              500: '#8b5cf6',
+              600: '#7c3aed',
+              700: '#6d28d9',
+            },
+            dark: {
+              950: '#090d16',
+              900: '#0f172a',
+              850: '#131d35',
+              800: '#1e293b',
+              700: '#334155',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+
+    /* Terminal blinking cursor */
+    .terminal-cursor::after {
+      content: '▋';
+      display: inline-block;
+      vertical-align: middle;
+      animation: blink 1s step-start infinite;
+      color: #38bdf8;
+    }
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
+    /* Pulse wave for live indicator */
+    @keyframes ping-slow {
+      0% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.6); opacity: 0; }
+      100% { transform: scale(1); opacity: 0; }
+    }
+    .animate-ping-slow {
+      animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+
+    /* Glass card style */
+    .glass-card {
+      background: rgba(19, 29, 53, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-card-hover:hover {
+      border-color: rgba(139, 92, 246, 0.35);
+      box-shadow: 0 10px 25px -5px rgba(124, 58, 237, 0.1);
+    }
+  </style>
+</head>
+
+<body class="bg-dark-950 text-slate-100 font-sans min-h-screen antialiased selection:bg-brand-600 selection:text-white pb-16">
+
+  <!-- ========================================================================= -->
+  <!-- 1. DASHBOARD HEADER                                                       -->
+  <!-- ========================================================================= -->
+  <header class="sticky top-0 z-40 bg-dark-900/90 backdrop-blur-md border-b border-slate-800/80 px-4 lg:px-8 py-3.5 transition-all duration-200">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+      
+      <!-- Brand Logo & Title -->
+      <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-brand-500/25 ring-1 ring-white/20">
+            <i data-lucide="sparkles" class="w-5 h-5 text-white"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-1.5">
+                ShopEasy <span class="bg-gradient-to-r from-brand-400 to-indigo-300 bg-clip-text text-transparent font-extrabold">Data Analyst Agent</span>
+              </h1>
+              <span class="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20">
+                Multi-Agent
+              </span>
+            </div>
+            <p class="text-xs text-slate-400">Autonomous D2C Analytics Powered by Gemini 2.5 Flash</p>
+          </div>
+        </div>
+
+        <!-- Live Pulse Indicator (Mobile View) -->
+        <div class="md:hidden flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping-slow absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span class="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">Live</span>
+        </div>
+      </div>
+
+      <!-- Center & Right Controls -->
+      <div class="flex flex-wrap items-center justify-end gap-2.5 w-full md:w-auto">
+        
+        <!-- Live Data Pulse Badge -->
+        <div class="hidden md:flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1.5 rounded-full shadow-inner">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping-slow absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span class="text-xs font-semibold text-emerald-400 tracking-wide uppercase">Live Pipeline</span>
+        </div>
+
+        <!-- Dynamic Date Range Chip -->
+        <div id="headerDateRangeChip" class="hidden items-center gap-1.5 bg-dark-850 border border-slate-700/80 px-3 py-1.5 rounded-lg text-xs text-slate-300 shadow-sm">
+          <i data-lucide="calendar" class="w-3.5 h-3.5 text-brand-400"></i>
+          <span class="text-slate-400 font-medium">Dates (DD-MM-YYYY):</span>
+          <span id="headerDateRangeText" class="font-mono font-semibold text-slate-200">Detecting...</span>
+        </div>
+
+        <!-- Source Google Sheet Link -->
+        <a id="headerSourceSheetLink" href="#" target="_blank" rel="noopener noreferrer" 
+           class="hidden items-center gap-1.5 bg-dark-850 hover:bg-dark-800 border border-slate-700/80 hover:border-slate-600 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white transition-all shadow-sm">
+          <i data-lucide="external-link" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span>Source Sheet</span>
+        </a>
+
+        <!-- API Key Configuration Modal Trigger -->
+        <button id="apiKeyConfigBtn" class="flex items-center gap-1.5 bg-dark-850 hover:bg-dark-800 border border-slate-700 hover:border-brand-500/40 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white transition-all shadow-sm">
+          <i data-lucide="key" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span id="apiKeyStatusBadge">Gemini 2.5 Flash Key</span>
+        </button>
+
+        <!-- Full Pipeline Refresh Button -->
+        <button id="refreshPipelineBtn" title="Rerun full pipeline from scratch: refetch, reanalyze, and regenerate insights" 
+                class="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-500 active:scale-95 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-md shadow-brand-600/30 transition-all">
+          <i data-lucide="rotate-cw" id="refreshIcon" class="w-3.5 h-3.5"></i>
+          <span>Refresh</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ========================================================================= -->
+  <!-- MAIN CONTAINER                                                            -->
+  <!-- ========================================================================= -->
+  <main class="max-w-7xl mx-auto px-4 lg:px-8 pt-6 space-y-6">
+
+    <!-- PIPELINE PROGRESS STEP WIZARD BAR -->
+    <div class="glass-card rounded-2xl p-4 border border-slate-800">
+      <div class="flex items-center justify-between text-xs font-medium text-slate-400 overflow-x-auto gap-2 pb-1">
+        <div id="stepTab1" class="flex items-center gap-2 text-brand-400 font-semibold transition-colors cursor-pointer">
+          <span class="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs shadow">1</span>
+          <span>Data Source</span>
+        </div>
+        <div class="h-0.5 flex-1 bg-slate-800 min-w-[20px]"></div>
+
+        <div id="stepTab2" class="flex items-center gap-2 text-slate-500 transition-colors">
+          <span class="w-6 h-6 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-xs">2</span>
+          <span>Questions</span>
+        </div>
+        <div class="h-0.5 flex-1 bg-slate-800 min-w-[20px]"></div>
+
+        <div id="stepTab3" class="flex items-center gap-2 text-slate-500 transition-colors">
+          <span class="w-6 h-6 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-xs">3</span>
+          <span>AI Recommendations</span>
+        </div>
+        <div class="h-0.5 flex-1 bg-slate-800 min-w-[20px]"></div>
+
+        <div id="stepTab4" class="flex items-center gap-2 text-slate-500 transition-colors">
+          <span class="w-6 h-6 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-xs">4</span>
+          <span>Dashboard & Agents</span>
+        </div>
+        <div class="h-0.5 flex-1 bg-slate-800 min-w-[20px]"></div>
+
+        <div id="stepTab5" class="flex items-center gap-2 text-slate-500 transition-colors">
+          <span class="w-6 h-6 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-xs">5</span>
+          <span>Streaming Insights</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================================= -->
+    <!-- STEP 1: DATA SOURCE INPUT SCREEN                                        -->
+    <!-- ======================================================================= -->
+    <section id="step1Section" class="space-y-6">
+      <div class="glass-card rounded-2xl p-6 lg:p-8 border border-slate-800 shadow-xl">
+        <div class="max-w-3xl mx-auto space-y-6">
+          
+          <div class="text-center space-y-2">
+            <div class="inline-flex p-3 rounded-2xl bg-brand-500/10 border border-brand-500/20 text-brand-400 mb-2">
+              <i data-lucide="sheet" class="w-8 h-8"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-white tracking-tight">Connect Your E-Commerce Data Source</h2>
+            <p class="text-sm text-slate-400">
+              Paste your Google Sheet CSV URL below. The system automatically reads schema, detects columns, and enforces strict <span class="text-brand-400 font-mono font-medium">DD-MM-YYYY</span> date parsing.
+            </p>
+          </div>
+
+          <!-- URL Input Form -->
+          <form id="dataSourceForm" class="space-y-4">
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
+                <i data-lucide="link-2" class="w-5 h-5"></i>
+              </div>
+              <input type="url" id="sheetUrlInput" required
+                     placeholder="https://docs.google.com/spreadsheets/d/.../export?format=csv (or published link)" 
+                     class="w-full pl-11 pr-28 py-3.5 bg-dark-900 border border-slate-700/80 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl text-sm text-slate-100 placeholder-slate-500 transition-all font-mono">
+              <button type="submit" id="fetchDataBtn" 
+                      class="absolute right-2 top-2 bottom-2 px-5 bg-brand-600 hover:bg-brand-500 active:scale-95 text-white font-medium text-xs rounded-lg transition-all flex items-center gap-1.5 shadow-md shadow-brand-600/30">
+                <i data-lucide="download" class="w-4 h-4"></i>
+                <span>Fetch Data</span>
+              </button>
+            </div>
+
+            <!-- Quick sample dataset loader -->
+            <div class="flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2 pt-1 px-1">
+              <div class="flex items-center gap-1.5">
+                <i data-lucide="info" class="w-3.5 h-3.5 text-brand-400"></i>
+                <span>Make sure the Google Sheet is "Published to web" or set to "Anyone with link can view".</span>
+              </div>
+              <button type="button" id="loadSampleDatasetBtn" class="text-brand-400 hover:text-brand-300 font-medium underline flex items-center gap-1">
+                <i data-lucide="database" class="w-3 h-3"></i>
+                Load Sample D2C E-Commerce Dataset
+              </button>
+            </div>
+          </form>
+
+          <!-- Fetching Spinner & Status -->
+          <div id="fetchLoadingState" class="hidden text-center py-8 space-y-3">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-brand-500"></div>
+            <p class="text-sm text-slate-400 font-medium" id="fetchLoadingMsg">Ingesting data from Google Sheets silently...</p>
+          </div>
+
+          <!-- Error Alert Banner -->
+          <div id="fetchErrorAlert" class="hidden p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs space-y-1">
+            <div class="font-semibold flex items-center gap-1.5">
+              <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-400"></i>
+              <span>Error Fetching Sheet Data</span>
+            </div>
+            <p id="fetchErrorText" class="text-slate-300 pl-5">Failed to fetch. Please ensure the link is publicly accessible or try the sample dataset.</p>
+          </div>
+
+          <!-- SCHEMA PREVIEW CONTAINER (Shown upon successful fetch) -->
+          <div id="schemaPreviewContainer" class="hidden space-y-6 pt-4 border-t border-slate-800">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 class="text-base font-semibold text-white flex items-center gap-2">
+                  <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
+                  Data Schema Detected
+                </h3>
+                <p class="text-xs text-slate-400">Dynamic column detection and strict DD-MM-YYYY date profiling.</p>
+              </div>
+
+              <!-- Metadata Summary Chips -->
+              <div class="flex flex-wrap items-center gap-2">
+                <div class="px-3 py-1.5 rounded-lg bg-dark-900 border border-slate-800 text-xs">
+                  <span class="text-slate-400">Total Rows:</span>
+                  <span id="previewTotalRows" class="font-bold text-slate-100 font-mono ml-1">0</span>
+                </div>
+                <div class="px-3 py-1.5 rounded-lg bg-dark-900 border border-slate-800 text-xs">
+                  <span class="text-slate-400">Columns:</span>
+                  <span id="previewTotalCols" class="font-bold text-slate-100 font-mono ml-1">0</span>
+                </div>
+                <div id="previewDateRangeChip" class="px-3 py-1.5 rounded-lg bg-brand-500/10 border border-brand-500/20 text-xs text-brand-300">
+                  <i data-lucide="calendar" class="w-3 h-3 inline mr-1 text-brand-400"></i>
+                  <span class="text-slate-400">Date Range:</span>
+                  <span id="previewDateRangeText" class="font-bold font-mono ml-1">Detecting...</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Column Types Badges -->
+            <div class="bg-dark-900/60 rounded-xl p-4 border border-slate-800 space-y-2">
+              <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Detected Columns & Inferred Types:</span>
+              <div id="columnBadgesGrid" class="flex flex-wrap gap-2">
+                <!-- Dynamically populated column badges -->
+              </div>
+            </div>
+
+            <!-- First 3 Sample Rows Clean Table -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">First 3 Sample Rows:</span>
+                <span class="text-[11px] text-slate-500">Dates parsed in strict DD-MM-YYYY format</span>
+              </div>
+              <div class="overflow-x-auto rounded-xl border border-slate-800 bg-dark-900/90 shadow-inner">
+                <table class="w-full text-left text-xs text-slate-300 divide-y divide-slate-800" id="sampleDataTable">
+                  <thead class="bg-dark-850 text-slate-400 font-semibold" id="sampleDataTableHead">
+                    <!-- Column Headers -->
+                  </thead>
+                  <tbody class="divide-y divide-slate-800/60 font-mono text-[11px]" id="sampleDataTableBody">
+                    <!-- 3 Sample Rows -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Confirmation Action -->
+            <div class="pt-4 flex justify-end">
+              <button id="confirmDataProceedBtn" class="flex items-center gap-2 px-6 py-3 bg-brand-600 hover:bg-brand-500 active:scale-95 text-white font-semibold text-sm rounded-xl shadow-lg shadow-brand-600/30 transition-all">
+                <span>The Data Looks Correct — Proceed to Questions</span>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ======================================================================= -->
+    <!-- STEP 2: BUSINESS QUESTIONS INPUT SCREEN                                 -->
+    <!-- ======================================================================= -->
+    <section id="step2Section" class="hidden space-y-6">
+      <div class="glass-card rounded-2xl p-6 lg:p-8 border border-slate-800 shadow-xl">
+        <div class="max-w-3xl mx-auto space-y-6">
+          
+          <div class="text-center space-y-2">
+            <div class="inline-flex p-3 rounded-2xl bg-brand-500/10 border border-brand-500/20 text-brand-400 mb-2">
+              <i data-lucide="help-circle" class="w-8 h-8"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-white tracking-tight">What Business Questions Do You Want Answered?</h2>
+            <p class="text-sm text-slate-400">
+              Enter up to 5 business questions in plain English. Minimum 1 question is required. Our AI agent will match them with your schema and recommend the best visualizations.
+            </p>
+          </div>
+
+          <!-- Dynamic Questions Form -->
+          <form id="businessQuestionsForm" class="space-y-4">
+            <div id="questionsInputList" class="space-y-3">
+              <!-- Dynamically populated question inputs (1 to 5) -->
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+              <button type="button" id="addQuestionBtn" class="flex items-center gap-1.5 px-3 py-2 bg-dark-850 hover:bg-dark-800 border border-slate-700 rounded-lg text-xs font-medium text-slate-300 hover:text-white transition-all">
+                <i data-lucide="plus" class="w-3.5 h-3.5 text-brand-400"></i>
+                <span>Add Question (Max 5)</span>
+              </button>
+
+              <button type="button" id="useSuggestedQuestionsBtn" class="text-xs text-brand-400 hover:text-brand-300 font-medium underline flex items-center gap-1">
+                <i data-lucide="sparkles" class="w-3 h-3"></i>
+                Auto-Suggest Questions Based on My Columns
+              </button>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="pt-6 flex justify-between items-center border-t border-slate-800">
+              <button type="button" id="backToStep1Btn" class="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors">
+                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                <span>Change Data Source</span>
+              </button>
+
+              <button type="submit" id="submitQuestionsBtn" class="flex items-center gap-2 px-6 py-3 bg-brand-600 hover:bg-brand-500 active:scale-95 text-white font-semibold text-sm rounded-xl shadow-lg shadow-brand-600/30 transition-all">
+                <span>Generate AI Chart Recommendations</span>
+                <i data-lucide="sparkles" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </form>
+
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ======================================================================= -->
+    <!-- STEP 3: AI CHART RECOMMENDATIONS & INTERACTIVE CONFIGURATION            -->
+    <!-- ======================================================================= -->
+    <section id="step3Section" class="hidden space-y-6">
+      <div class="glass-card rounded-2xl p-6 lg:p-8 border border-slate-800 shadow-xl">
+        <div class="max-w-5xl mx-auto space-y-6">
+          
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="px-2.5 py-0.5 rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20 text-xs font-semibold">
+                  Step 3: Review & Customise
+                </span>
+                <span class="text-xs text-slate-400">Gemini 2.5 Flash Reasoning</span>
+              </div>
+              <h2 class="text-2xl font-bold text-white tracking-tight">AI Chart Recommendations</h2>
+              <p class="text-xs text-slate-400">
+                Review the AI-recommended visual configurations. Modify chart types or axes via dropdowns with instant live thumbnail previews.
+              </p>
+            </div>
+
+            <button id="confirmAllConfigsBtn" class="flex items-center gap-2 px-6 py-3 bg-brand-600 hover:bg-brand-500 active:scale-95 text-white font-semibold text-sm rounded-xl shadow-lg shadow-brand-600/30 transition-all shrink-0">
+              <i data-lucide="play" class="w-4 h-4 fill-white"></i>
+              <span>Confirm Configurations & Run Agents</span>
+            </button>
+          </div>
+
+          <!-- Loading state for Step 3 AI Call -->
+          <div id="recommenderLoadingState" class="text-center py-12 space-y-4">
+            <div class="inline-block animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-brand-500"></div>
+            <div>
+              <h4 class="text-base font-semibold text-white">Gemini 2.5 Flash Analyzing Questions & Schema...</h4>
+              <p class="text-xs text-slate-400 mt-1">Selecting optimal chart types, dimensions, and aggregations for each question.</p>
+            </div>
+          </div>
+
+          <!-- Editable Recommendation Cards Grid -->
+          <div id="recommendationCardsGrid" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Dynamically populated recommendation cards with live mini previews -->
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ======================================================================= -->
+    <!-- STEP 4 & 5: DASHBOARD RENDERS & AI INSIGHTS                             -->
+    <!-- ======================================================================= -->
+    <div id="dashboardSection" class="hidden space-y-6">
+
+      <!-- ===================================================================== -->
+      <!-- 2. AGENT STATUS PANEL (Horizontal Strip)                               -->
+      <!-- ===================================================================== -->
+      <section class="glass-card rounded-2xl p-4 border border-slate-800 shadow-md">
+        <div class="flex items-center justify-between mb-3 px-1">
+          <div class="flex items-center gap-2">
+            <i data-lucide="cpu" class="w-4 h-4 text-brand-400"></i>
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-300">Multi-Agent Execution Pipeline</span>
+          </div>
+          <span class="text-[11px] text-slate-500">Strict sequential gating & barriered execution</span>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <!-- 1. Orchestrator -->
+          <div id="statusOrchestrator" class="bg-dark-900 border border-slate-800 rounded-xl p-3 flex flex-col justify-between transition-all">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold text-slate-300">Orchestrator</span>
+              <span id="badgeOrchestrator" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">Waiting</span>
+            </div>
+            <p class="text-[11px] text-slate-500 truncate" id="descOrchestrator">Coordinates lifecycle</p>
+          </div>
+
+          <!-- 2. Data Ingestion Agent -->
+          <div id="statusIngestion" class="bg-dark-900 border border-slate-800 rounded-xl p-3 flex flex-col justify-between transition-all">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold text-slate-300">Data Ingestion</span>
+              <span id="badgeIngestion" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">Waiting</span>
+            </div>
+            <p class="text-[11px] text-slate-500 truncate" id="descIngestion">RFC 4180 & DD-MM-YYYY</p>
+          </div>
+
+          <!-- 3. KPI Discovery Agent -->
+          <div id="statusKpi" class="bg-dark-900 border border-slate-800 rounded-xl p-3 flex flex-col justify-between transition-all">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold text-slate-300">KPI Discovery</span>
+              <span id="badgeKpi" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">Waiting</span>
+            </div>
+            <p class="text-[11px] text-slate-500 truncate" id="descKpi">Discovers core metrics</p>
+          </div>
+
+          <!-- 4. Chart Visual Agent -->
+          <div id="statusCharts" class="bg-dark-900 border border-slate-800 rounded-xl p-3 flex flex-col justify-between transition-all">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold text-slate-300">Chart Visualizer</span>
+              <span id="badgeCharts" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">Waiting</span>
+            </div>
+            <p class="text-[11px] text-slate-500 truncate" id="descCharts">Sequential rendering</p>
+          </div>
+
+          <!-- 5. Strategic Insight Agent -->
+          <div id="statusInsights" class="bg-dark-900 border border-slate-800 rounded-xl p-3 flex flex-col justify-between transition-all">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold text-slate-300">Strategic Insights</span>
+              <span id="badgeInsights" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">Waiting</span>
+            </div>
+            <p class="text-[11px] text-slate-500 truncate" id="descInsights">Gemini 2.5 Flash Stream</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- 3. AGENT OPERATIONS CONSOLE (Dark Terminal)                            -->
+      <!-- ===================================================================== -->
+      <section class="glass-card rounded-2xl border border-slate-800 overflow-hidden shadow-lg">
+        <div class="bg-dark-900 px-4 py-2.5 flex items-center justify-between border-b border-slate-800/80">
+          <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5 mr-2">
+              <div class="w-3 h-3 rounded-full bg-rose-500/80"></div>
+              <div class="w-3 h-3 rounded-full bg-amber-500/80"></div>
+              <div class="w-3 h-3 rounded-full bg-emerald-500/80"></div>
+            </div>
+            <i data-lucide="terminal" class="w-4 h-4 text-brand-400"></i>
+            <span class="text-xs font-mono font-semibold text-slate-300">Agent Operations Console</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="clearLogsBtn" class="text-[11px] font-mono text-slate-400 hover:text-white px-2 py-0.5 rounded bg-dark-800 hover:bg-slate-700 transition">Clear</button>
+            <button id="toggleConsoleBtn" class="text-[11px] font-mono text-slate-400 hover:text-white px-2 py-0.5 rounded bg-dark-800 hover:bg-slate-700 transition">Minimize</button>
+          </div>
+        </div>
+
+        <div id="consoleLogPanel" class="p-4 bg-dark-950/95 font-mono text-xs text-slate-300 h-44 overflow-y-auto space-y-1.5 transition-all">
+          <div class="text-slate-500 flex items-center gap-2">
+            <span class="text-emerald-400">●</span>
+            <span>Agent Operations Telemetry Bus initialized. Awaiting pipeline triggers...</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- 4. DYNAMIC KPI SUMMARY CARDS                                          -->
+      <!-- ===================================================================== -->
+      <section class="space-y-2">
+        <div class="flex items-center justify-between px-1">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+            <i data-lucide="trending-up" class="w-4 h-4 text-emerald-400"></i>
+            Executive KPI Summary
+          </h3>
+          <span class="text-xs text-slate-500">Dynamically inferred from dataset metrics</span>
+        </div>
+        
+        <div id="kpiCardsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- Dynamically populated KPI Cards (e.g. Total Revenue, Total Orders, Average Delivery Days, AOV) -->
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- 5. CHART SECTIONS (Sequentially Rendered)                             -->
+      <!-- ===================================================================== -->
+      <section class="space-y-3">
+        <div class="flex items-center justify-between px-1">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+            <i data-lucide="bar-chart-3" class="w-4 h-4 text-brand-400"></i>
+            Visual Business Analysis
+          </h3>
+          <span id="chartsRenderProgressBadge" class="text-xs text-slate-400 font-mono">Rendering...</span>
+        </div>
+
+        <div id="fullChartsGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Full-size rendered charts for each business question -->
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- 6. AI STRATEGIC INSIGHTS SECTION (Streamed via Gemini 2.5 Flash)      -->
+      <!-- ===================================================================== -->
+      <section id="insightsSection" class="glass-card rounded-2xl p-6 lg:p-8 border border-brand-500/30 shadow-2xl relative overflow-hidden">
+        <!-- Glowing gradient accent banner -->
+        <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-brand-500 via-indigo-500 to-emerald-400"></div>
+
+        <div class="space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="px-2.5 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <i data-lucide="sparkles" class="w-3.5 h-3.5 text-brand-400"></i>
+                  AI-Generated Strategic Insights
+                </span>
+                <span class="text-xs font-mono text-slate-400">Google Gemini 2.5 Flash</span>
+              </div>
+              <h3 class="text-xl font-bold text-white tracking-tight">Executive Business Insights & Action Plan</h3>
+              <p class="text-xs text-slate-400">
+                Synthesized directly from your rendered charts and verified KPI figures. Problem identified $\rightarrow$ direct business action.
+              </p>
+            </div>
+
+            <!-- Insight status indicator -->
+            <div id="insightStreamingBadge" class="hidden items-center gap-2 px-3 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-xs text-brand-400 font-mono">
+              <span class="w-2 h-2 rounded-full bg-brand-400 animate-ping"></span>
+              <span>Streaming Live...</span>
+            </div>
+          </div>
+
+          <!-- Insight Bullet Container -->
+          <div id="insightsContainer" class="space-y-3 min-h-[120px] pt-2">
+            <!-- Bullets stream here in real time -->
+            <div id="insightPendingPlaceholder" class="text-slate-500 text-xs flex items-center gap-2 py-4">
+              <i data-lucide="clock" class="w-4 h-4 text-slate-600"></i>
+              <span>Gated execution: Insight Generator Agent will automatically trigger as soon as all charts finish rendering.</span>
+            </div>
+          </div>
+
+          <!-- AI Grounding footer -->
+          <div class="pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between text-[11px] text-slate-500 gap-2">
+            <span>Grounding guarantee: Every insight quotes verified numbers from the source dataset. No synthetic hallucinations.</span>
+            <span class="font-mono text-slate-400">Model: gemini-2.5-flash</span>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- GEMINI API KEY CONFIGURATION MODAL                                        -->
+  <!-- ========================================================================= -->
+  <div id="apiKeyModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="glass-card max-w-md w-full rounded-2xl p-6 border border-slate-700 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2">
+          <div class="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400">
+            <i data-lucide="key" class="w-4 h-4"></i>
+          </div>
+          <h3 class="text-base font-bold text-white">Gemini 2.5 Flash API Key</h3>
+        </div>
+        <button id="closeApiKeyModalBtn" class="text-slate-400 hover:text-white p-1 rounded-lg">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-300">
+        All reasoning in Step 3 and real-time streaming insights in Step 5 strictly call <span class="text-brand-400 font-mono font-medium">gemini-2.5-flash</span>. Your API key is stored securely in your browser's <span class="font-mono text-slate-200">localStorage</span> and never transmitted to any third-party server.
+      </p>
+
+      <div class="space-y-2">
+        <label for="apiKeyInput" class="block text-xs font-semibold text-slate-300">Gemini API Key</label>
+        <div class="relative">
+          <input type="password" id="apiKeyInput" placeholder="AIzaSy..." 
+                 class="w-full px-3.5 py-2.5 bg-dark-900 border border-slate-700 focus:border-brand-500 rounded-xl text-xs font-mono text-slate-100 placeholder-slate-500">
+          <button type="button" id="toggleApiKeyVisibility" class="absolute right-3 top-2.5 text-slate-400 hover:text-white">
+            <i data-lucide="eye" class="w-4 h-4" id="eyeIcon"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between text-xs pt-1">
+        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" 
+           class="text-brand-400 hover:underline flex items-center gap-1">
+          <span>Get a free key from Google AI Studio</span>
+          <i data-lucide="external-link" class="w-3 h-3"></i>
+        </a>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+        <button id="clearApiKeyBtn" class="px-4 py-2 bg-dark-800 hover:bg-slate-700 text-rose-300 text-xs font-medium rounded-lg transition">Clear Key</button>
+        <button id="saveApiKeyBtn" class="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-lg shadow transition">Save Key</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- APPLICATION SCRIPT                                                        -->
+  <!-- ========================================================================= -->
+  <script src="app.js"></script>
+
+</body>
+</html>
